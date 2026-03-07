@@ -1,0 +1,51 @@
+[project]
+name = "typed-registers"
+dynamic = [
+    "version",
+]
+dependencies = []
+description = "typed-registers"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "Joshua B. Bussdieker", email = "jbussdieker@gmail.com" },
+]
+maintainers = [
+    { name = "Joshua B. Bussdieker", email = "jbussdieker@gmail.com" },
+]
+classifiers = [
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Hardware",
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Typing :: Typed",
+]
+keywords = ["typed-registers"]
+license = "MIT"
+
+[project.optional-dependencies]
+i2c = ["smbus2"]
+
+[project.urls]
+Homepage = "https://github.com/jbussdieker/typed-registers"
+Documentation = "https://github.com/jbussdieker/typed-registers/blob/main/README.md"
+Repository = "https://github.com/jbussdieker/typed-registers"
+Issues = "https://github.com/jbussdieker/typed-registers/issues"
+Changelog = "https://github.com/jbussdieker/typed-registers/blob/main/CHANGELOG.md"
+
+[build-system]
+requires = [
+    "setuptools",
+    "setuptools-scm",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+fallback_version = "0.0.0"
