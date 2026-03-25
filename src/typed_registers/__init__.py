@@ -1,9 +1,16 @@
 from .bus import RegisterBus
-from .register import Register, ByteRegister, Int24Register, Int32Register
+from .register import (
+    Register,
+    BlockRegister,
+    ByteRegister,
+    Int24Register,
+    Int32Register,
+)
 
 __all__ = [
     "RegisterBus",
     "Register",
+    "BlockRegister",
     "ByteRegister",
     "Int24Register",
     "Int32Register",
