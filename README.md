@@ -2,73 +2,55 @@
 
 **typed-registers** is a small, type-safe library for working with hardware registers in Python.
 
-It provides a simple abstraction for defining registers as Python classes and reading/writing them through a pluggable bus interface.
+It lets you define registers as Python classes and interact with them through a pluggable bus interface — eliminating manual byte manipulation while keeping full control over hardware behavior.
 
-The goal is to make device register access:
+The goal is to make register access:
 
 * **typed**
 * **explicit**
-* **reusable**
+* **composable**
 * **testable**
 
-instead of manually handling raw byte buffers.
+instead of opaque byte slicing and bit masking.
 
-This is especially useful when working with:
-
-* I²C devices
-* SPI devices
-* embedded sensors
-* ADCs / DACs
-* microcontroller peripherals
-* device drivers
-
-# Features
+## Features
 
 * Typed register definitions using Python classes
-* Clear separation between **register definitions** and **transport buses**
+* Clear separation between **register logic** and **transport**
 * Works with **I²C, SPI, UART, mock buses, or custom transports**
-* Built-in register helpers:
-
-  * `ByteRegister`
-  * `Int24Register`
-  * `Int32Register`
-* Optional **SMBus / smbus2** support
+* Minimal API surface
 * Fully typed (`Typing :: Typed`)
 * Python 3.11+
 
-# Installation
+### Built-in Register Types
 
-### Basic installation
+| Class           | Description                           |
+| --------------- | ------------------------------------- |
+| `ByteRegister`  | single byte register                  |
+| `Int24Register` | signed 24-bit integer                 |
+| `Int32Register` | signed 32-bit integer                 |
+| `BlockRegister` | structured multi-byte register blocks |
+
+## Installation
 
 ```bash
 pip install typed-registers
 ```
 
-### With I²C support
+With I²C support:
 
 ```bash
 pip install typed-registers[i2c]
 ```
 
-This installs:
-
-```
-smbus2
-```
-
-# Quick Example
-
-Define a register:
+## Quick Example
 
 ```python
 from typed_registers import Int32Register
 
-
 class TemperatureRegister(Int32Register):
     ADDRESS = 0x10
 ```
-
-Read it from a device:
 
 ```python
 from smbus2 import SMBus
@@ -77,31 +59,20 @@ from typed_registers.bus import SMBusRegisterBus
 bus = SMBusRegisterBus(SMBus(1))
 
 temp = TemperatureRegister.read(bus, addr=0x40)
-
 print(temp.value)
 ```
 
-Write a register:
+## Byte Registers
 
 ```python
-TemperatureRegister(value=42).write(bus, addr=0x40)
-```
-
-# Byte Registers
-
-`ByteRegister` is useful for registers that represent a single byte with custom encoding.
-
-Example:
-
-```python
+from dataclasses import dataclass
 from typed_registers import ByteRegister
 
-
+@dataclass(slots=True, frozen=True)
 class ModeRegister(ByteRegister):
     ADDRESS = 0x01
 
-    def __init__(self, enabled: bool):
-        self.enabled = enabled
+    enabled: bool
 
     def to_byte(self) -> int:
         return 0x01 if self.enabled else 0x00
@@ -111,23 +82,41 @@ class ModeRegister(ByteRegister):
         return cls(enabled=bool(value & 0x01))
 ```
 
-# Built-in Register Types
+## Block Registers
 
-The library provides a few common register types:
+`BlockRegister` is used for structured multi-byte registers.
 
-| Class           | Description           |
-| --------------- | --------------------- |
-| `ByteRegister`  | single byte register  |
-| `Int24Register` | signed 24-bit integer |
-| `Int32Register` | signed 32-bit integer |
+You define how raw bytes map into fields:
 
-All registers:
+```python
+from dataclasses import dataclass
+from typed_registers import BlockRegister
 
-* validate byte width
-* convert between Python values and raw bytes
-* support `.read()` and `.write()` operations
+@dataclass(slots=True, frozen=True)
+class ExampleBlock(BlockRegister):
+    ADDRESS = 0x20
+    WIDTH = 3
 
-# Bus Abstraction
+    high: int
+    low: int
+
+    @classmethod
+    def _decode(cls, data: bytes):
+        return cls(
+            high=data[0],
+            low=(data[1] << 8) | data[2],
+        )
+```
+
+Read it like any other register:
+
+```python
+value = ExampleBlock.read(bus, addr=0x40)
+```
+
+By default, `BlockRegister` is read-only. Override `_encode()` to support writing.
+
+## Bus Abstraction
 
 Registers operate through the `RegisterBus` protocol:
 
@@ -137,19 +126,9 @@ class RegisterBus(Protocol):
     def write(self, addr: int, reg: int, data: bytes) -> None
 ```
 
-This allows registers to work with **any transport layer**.
+This allows registers to work with any transport layer.
 
-For example:
-
-* I²C
-* SPI
-* UART
-* USB
-* mock testing buses
-
-# SMBus / I²C Support
-
-If the `i2c` extra is installed, an SMBus adapter is available.
+## SMBus / I²C Support
 
 ```python
 from smbus2 import SMBus
@@ -158,16 +137,11 @@ from typed_registers.bus import SMBusRegisterBus
 bus = SMBusRegisterBus(SMBus(1))
 ```
 
-This works with both:
+Supports both `smbus` and `smbus2`.
 
-* `smbus`
-* `smbus2`
+## Testing
 
-# Testing
-
-Because the bus is abstracted behind a protocol, it is easy to create test buses.
-
-Example:
+Because the bus is abstracted, registers are easy to test:
 
 ```python
 class FakeBus:
@@ -178,32 +152,28 @@ class FakeBus:
         print("write:", addr, reg, data)
 ```
 
-Now registers can be tested without real hardware.
+## Design Philosophy
 
-# Design Goals
+This library intentionally keeps things simple:
 
-This library aims to provide:
+* Registers are **first-class objects**
+* Encoding/decoding is **explicit and local**
+* No hidden magic or frameworks
+* Hardware behavior remains visible
 
-* **minimal API surface**
-* **strong typing**
-* **clear register semantics**
-* **easy device driver construction**
+The register map *is the API*.
 
-without introducing heavy frameworks or complex abstractions.
+## Status
 
-# Status
+**Alpha**
 
-This project is currently **alpha**.
+The API is stabilizing and already used in real drivers, but may evolve.
 
-The API may change while the design stabilizes.
-
-# License
+## License
 
 MIT License
 
-# Author
+## Author
 
-Joshua B. Bussdieker
-
-GitHub:
+**Joshua B. Bussdieker**
 [https://github.com/jbussdieker](https://github.com/jbussdieker)
